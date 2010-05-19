@@ -88,7 +88,7 @@ class MP3Chunker(threading.Thread):
                 finally:
                     self._clientlock.release()
 
-                timetosleep = 2048.0 / (self.bitrate * 1024.0)
+                timetosleep = 2048.0 / ((self.bitrate / 8) * 1024.0)
                 time.sleep(timetosleep)
         finally:
             os.kill(proc.pid, signal.SIGKILL) # because 2.5 doesn't have terminate()
