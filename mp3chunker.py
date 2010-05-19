@@ -14,9 +14,15 @@ class MP3Chunker(threading.Thread):
         self._fnames   = None
         self._clients  = set()
         self._clientlock = threading.Lock()
+        self._lame_exe   = '/usr/local/bin/lame'
+        self._trackidx   = 0
+        self.bitrate     = 128
 
-    def load(self):
-        self._fnames = ['media/Castlevania - Sonata of the Damned/01 Vampire Snap (Castlevania - Vampire Killer).mp3']
+
+    def load(self, config):
+        self._lame_exe = config.get('lame', 'exe')
+        self.bitrate   = config.getint('lame', 'bitrate')
+        self._fnames   = ['media/Castlevania - Sonata of the Damned/01 Vampire Snap (Castlevania - Vampire Killer).mp3']
 
     def add_client(self, client):
         try:
@@ -35,8 +41,16 @@ class MP3Chunker(threading.Thread):
     def stop(self):
         self._running = False
 
+    def _next_trackname(self):
+        if self._trackidx >= len(self._fnames): 
+            self._trackidx = 0
+
+        ret = self._fnames[self._trackidx]
+        self._trackidx += 1
+        return ret
+
     def _lame_enc_stream(self, fname):
-        lfile = '/opt/local/bin/lame -b 128 --noreplaygain --quiet "%s" -' % (fname)
+        lfile = '%s -b %d --noreplaygain --quiet "%s" -' % (self._lame_exe, self.bitrate, fname)
         proc = subprocess.Popen(lfile, shell=True, stdout=subprocess.PIPE)
         print "Streaming %s" % (fname)
         return proc
@@ -44,14 +58,13 @@ class MP3Chunker(threading.Thread):
     def run(self):
         self._running = True
 
-        proc = self._lame_enc_stream(self._fnames[0])
-
+        proc = self._lame_enc_stream(self._next_trackname())
         try:
             while(self._running):
                 data = proc.stdout.read(2048)
                 if not data:
                     os.kill(proc.pid, signal.SIGKILL) # because 2.5 doesn't have terminate()
-                    proc = self._lame_enc_stream(self._fnames[0])
+                    proc = self._lame_enc_stream(self._next_trackname())
                     continue
                     
                 try:
@@ -59,18 +72,25 @@ class MP3Chunker(threading.Thread):
                     toremove = []
                     for c in self._clients:
                         try:
-                            c.wfile.write(data)
+                            bytes_to_send = len(data)
+                            bytes_sent = 0
+                            while bytes_sent < bytes_to_send:
+                                bytes_sent += c.send(data)
+
                         except socket.error, e:
                             print e
                             toremove.append(c)
 
                     for tr in toremove:
+                        tr.close()
                         self._clients.remove(tr)
 
                 finally:
                     self._clientlock.release()
 
-                time.sleep(0.125)
+                timetosleep = 2048.0 / (self.bitrate * 1024.0)
+                time.sleep(timetosleep)
         finally:
-            proc.terminate()
+            os.kill(proc.pid, signal.SIGKILL) # because 2.5 doesn't have terminate()
+
             

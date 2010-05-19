@@ -1,65 +1,75 @@
 #!/usr/bin/env python
 
-"""
-ICY 200 OK
-icy-notice1:<BR>This stream requires <a href="http://www.winamp.com/">Winamp</a><BR>
-icy-notice2:SHOUTcast Distributed Network Audio Server/win32 v1.9.7<BR>
-icy-name:Monkey Radio: Grooving. Sexy. Beats.
-icy-genre:funkjazztechnoporn
-icy-url:http://monkeyradio.org/
-content-type:audio/mpeg
-icy-pub:0
-icy-br:192
-"""
-
-import SocketServer
+import ConfigParser
+import socket
 import time
 from   mp3chunker import MP3Chunker
 
 g_mp3chunker = None
 
-class MP3ServeHandler(SocketServer.StreamRequestHandler):
-    
-    def _send_header(self, str):
-        self.wfile.write(str + '\r\n')
+class ServerListener:
 
-    def _send_endheaders(self):
-        self.wfile.write('\r\n')
+    def __init__(self):
+        pass
 
-    def handle(self):
-        print self.rfile.readline().strip()
-        self._send_header('ICY 200 OK')
-        self._send_header('icy-name:OCRadio. Video Game ReMiX.')
-        self._send_header('icy-genre:Video game music.')
-        self._send_header('icy-url:http://www.msynet.com/ocradio/')
-        self._send_header('content-type:audio/mpeg')
-        self._send_header('icy-pub:0')
-        self._send_header('icy-br:128')
-        self._send_endheaders();
+    def _write_header(self, client, str):
+        client.send(str + '\r\n')
 
+    def _write_endheaders(self, client):
+        client.send('\r\n')
+
+    def _send_icy_header(self, client):
         global g_mp3chunker
-        try:
-            g_mp3chunker.add_client(self)
-            while(True):
-                time.sleep(0.25)
-        finally:
-            g_mp3chunker.remove_client(self)
+
+        self._write_header(client, 'ICY 200 OK')
+        self._write_header(client, 'icy-name:OCRadio. Video Game ReMiX.')
+        self._write_header(client, 'icy-genre:Video game music.')
+        self._write_header(client, 'icy-url:http://www.msynet.com/ocradio/')
+        self._write_header(client, 'content-type:audio/mpeg')
+        self._write_header(client, 'icy-pub:0')
+        self._write_header(client, 'icy-br:%d' % (g_mp3chunker.bitrate))
+        self._write_endheaders(client);
+
+    def close(self):
+        pass
+
+    def serve(self):
+        global g_mp3chunker
+
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        s.bind(('', 8989))
+        s.listen(1)
+
+        while True:
+            conn, addr = s.accept()
+            print "Accepted connection"
+            data = conn.recv(1024)
+            if not data: continue
+
+            print data
+            self._send_icy_header(conn)
+            
+            g_mp3chunker.add_client(conn)
 
 def main():
     global g_mp3chunker
     server = None
     try:
+        config = ConfigParser.ConfigParser()
+        config.readfp(file('default.cfg'))
+
         g_mp3chunker = MP3Chunker()
-        g_mp3chunker.load()
+        g_mp3chunker.load(config)
         g_mp3chunker.start()
 
-        server = SocketServer.ThreadingTCPServer(('', 8989), MP3ServeHandler)
-        server.allow_reuse_address = True
+        server = ServerListener()
         print 'started OCRadio Server...'
-        server.serve_forever()
-    except:
+        server.serve()
+    except Exception, e:
+        print e
         if server != None:
-            server.socket.close()
+            server.close()
         g_mp3chunker.stop()
             
 if __name__ == '__main__':
