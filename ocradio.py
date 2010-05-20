@@ -33,6 +33,7 @@ class ServerListener:
 
     def load(self, config):
         self.port = config.getint('network', 'port')
+        self._maxusers = config.getint('network', 'maxusers')
 
     def close(self):
         pass
@@ -56,10 +57,15 @@ class ServerListener:
                     print "Accepted a connection from ", addr
                     data = conn.recv(1024)
                     if not data: continue
-                    
                     print data
-                    self._send_icy_header(conn)
-                    g_mp3chunker.add_client(conn)
+
+                    if g_mp3chunker.numusers >= self._maxusers:
+                        self._write_header(conn, 'ICY 400 SERVER FULL')
+                        self._write_endheaders(conn)
+                        conn.close()
+                    else:
+                        self._send_icy_header(conn)
+                        g_mp3chunker.add_client(conn)
 
             except KeyboardInterrupt:
                 running = False
