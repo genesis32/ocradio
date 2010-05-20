@@ -110,7 +110,7 @@ class MP3Chunker(threading.Thread):
 
                     for tr in toremove:
                         tr.close()
-                        numusers -= 1
+                        self.numusers -= 1
                         self._clients.remove(tr)
 
                 finally:
