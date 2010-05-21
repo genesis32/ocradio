@@ -8,6 +8,8 @@ import signal
 import subprocess
 import threading
 
+import dataloggers
+
 class MP3Chunker(threading.Thread):
     ChunkSize = 2048
 
@@ -22,6 +24,7 @@ class MP3Chunker(threading.Thread):
         self._tempdir    = '/tmp/'
         self.bitrate     = 128
         self.numusers    = 0
+        self.recent_tracks = dataloggers.RecentlyPlayedTracks()
 
     def load(self, config):
 
@@ -47,6 +50,8 @@ class MP3Chunker(threading.Thread):
         self._fnames = [line.rstrip() for line in fh.readlines()]
         fh.close()
 
+        self.recent_tracks.load(config)
+
         print "Queued %d songs." % (len(self._fnames))
 
     def add_client(self, client):
@@ -66,10 +71,13 @@ class MP3Chunker(threading.Thread):
 
         ret = self._fnames[self._trackidx]
 
+        # replace this with another 
         fs = os.path.join(self._tempdir, 'song.idx')
         fh = file(fs, 'w')
         fh.write(str(self._trackidx))
         fh.close()
+
+        self.recent_tracks.update(ret)
 
         self._trackidx += 1
 
@@ -94,7 +102,9 @@ class MP3Chunker(threading.Thread):
                     os.kill(proc.pid, signal.SIGKILL) # because 2.5 doesn't have terminate()
                     proc = self._lame_enc_stream(self._next_trackname())
                     continue
-                    
+                
+                start = time.time()
+
                 try:
                     self._clientlock.acquire()
                     toremove = []
@@ -103,7 +113,7 @@ class MP3Chunker(threading.Thread):
                             bytes_to_send = len(data)
                             bytes_sent = 0
                             while bytes_sent < bytes_to_send:
-                                bytes_sent += c.send(data)
+                                bytes_sent += c.send(data[bytes_sent:])
                         except socket.error, e:
                             print e
                             toremove.append(c)
@@ -116,7 +126,8 @@ class MP3Chunker(threading.Thread):
                 finally:
                     self._clientlock.release()
 
-                time.sleep(timetosleep)
+                elapsed = time.time() - start
+                time.sleep(timetosleep - elapsed)
         finally:
             os.kill(proc.pid, signal.SIGKILL) # because 2.5 doesn't have terminate()
 
