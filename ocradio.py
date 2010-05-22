@@ -46,7 +46,7 @@ class ServerListener:
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         s.bind(('', self.port))
-        s.listen(1)
+        s.listen(5)
 
         running = True
         while running:
@@ -69,6 +69,8 @@ class ServerListener:
 
             except KeyboardInterrupt:
                 running = False
+
+        s.close()
 
 def main():
     global g_mp3chunker

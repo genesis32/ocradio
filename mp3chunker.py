@@ -3,6 +3,7 @@
 import os
 import sys
 import time
+import select
 import socket
 import signal
 import subprocess
@@ -89,6 +90,12 @@ class MP3Chunker(threading.Thread):
         print "Streaming %s" % (fname)
         return proc
 
+    def _remove_client(self, client):
+        client.close()
+        self._clients.remove(client)
+        self.numusers -= 1
+        print "Removed client"
+
     def run(self):
         self._running = True
 
@@ -104,31 +111,35 @@ class MP3Chunker(threading.Thread):
                     continue
                 
                 start = time.time()
-
                 try:
                     self._clientlock.acquire()
-                    toremove = []
-                    for c in self._clients:
+                    
+                    r, w, e = select.select(self._clients, self._clients, [], 0)
+                    for client in w:
                         try:
                             bytes_to_send = len(data)
                             bytes_sent = 0
                             while bytes_sent < bytes_to_send:
-                                bytes_sent += c.send(data[bytes_sent:])
+                                bytes_sent += client.send(data[bytes_sent:])
                         except socket.error, e:
-                            print e
-                            toremove.append(c)
-
-                    for tr in toremove:
-                        tr.close()
-                        self.numusers -= 1
-                        self._clients.remove(tr)
-
+                            self._remove_client(client)
+                            
+                    for client in r:
+                        if client in self._clients:
+                            bytes = client.recv(1024)
+                            if len(bytes) == 0:
+                                self._remove_client(client)
+                                
                 finally:
                     self._clientlock.release()
 
                 elapsed = time.time() - start
                 time.sleep(timetosleep - elapsed)
         finally:
+            for tr in self._clients:
+                tr.close()
+            self._clients = []
+            self._numusers = 0
             os.kill(proc.pid, signal.SIGKILL) # because 2.5 doesn't have terminate()
 
             
