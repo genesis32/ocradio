@@ -2,37 +2,40 @@
 
 import os
 
+class InstantaneousDataLog:
+    def dumpvalue(fname, str):
+        try:
+            fh = file(fname, 'w')
+            fh.write(str)
+        finally:
+            fh.close()
+    dumpvalue = staticmethod(dumpvalue)
+
 class RecentlyPlayedTracks:
     
     def __init__(self):
-        self.recentlist = 'recent.list'
         self.numitems   = 5
+        self.recentlistfile = '/tmp/recent.list'
 
     def load(self, config):
-        tempdir = config.get('data', 'tempdir')
-        if not os.path.isdir(tempdir):
-            raise Exception("Temp dir %s not found." % (self._tempdir))
-
         self.numitems = config.getint('data', 'recentlistsize')
-        recentlist = config.get('data', 'recentlist')
+        self.recentlistfile = config.get('data', 'recentlist')
 
-        self.recentlist = os.path.join(tempdir, recentlist)
-
-        file(self.recentlist, 'wa').close()
+        file(self.recentlistfile, 'wa').close()
 
     def update(self, trackname):
-        fh = file(self.recentlist, 'r')
+        fh = file(self.recentlistfile, 'r')
         lastfiles = fh.readlines()
         fh.close()
 
         lastfiles.insert(0, os.path.basename(trackname) + os.linesep)
 
-        fh = file(self.recentlist, 'w')
+        fh = file(self.recentlistfile, 'w')
         fh.writelines(lastfiles[:self.numitems])
         fh.close()
 
     def get_entries(self):
-        fh = file(self.recentlist)
+        fh = file(self.recentlistfile)
         ret = fh.readlines()
         fh.close()
 

@@ -10,6 +10,7 @@ import subprocess
 import threading
 
 import dataloggers
+from   dataloggers import InstantaneousDataLog
 
 class MP3Chunker(threading.Thread):
     ChunkSize = 2048
@@ -22,7 +23,7 @@ class MP3Chunker(threading.Thread):
         self._clientlock = threading.Lock()
         self._lame_exe   = '/usr/local/bin/lame'
         self._trackidx   = 0
-        self._tempdir    = '/tmp/'
+        self._songidxfile = '/tmp/song.idx'
         self.bitrate     = 128
         self.numusers    = 0
         self.recent_tracks = dataloggers.RecentlyPlayedTracks()
@@ -43,9 +44,7 @@ class MP3Chunker(threading.Thread):
         if not os.path.isfile(self._filelist):
             raise Exception("Songlist file %s not found." % (self._filelist))
 
-        self._tempdir = config.get('data', 'tempdir')
-        if not os.path.isdir(self._tempdir):
-            raise Exception("Temp dir %s not found." % (self._tempdir))
+        self._songidxfile = config.get('data', 'songindex')
 
         fh = file(self._filelist)
         self._fnames = [line.rstrip() for line in fh.readlines()]
@@ -72,11 +71,7 @@ class MP3Chunker(threading.Thread):
 
         ret = self._fnames[self._trackidx]
 
-        # replace this with another 
-        fs = os.path.join(self._tempdir, 'song.idx')
-        fh = file(fs, 'w')
-        fh.write(str(self._trackidx))
-        fh.close()
+        InstantaneousDataLog.dumpvalue(self._songidxfile, str(self._trackidx)) 
 
         self.recent_tracks.update(ret)
 
@@ -126,8 +121,11 @@ class MP3Chunker(threading.Thread):
                             
                     for client in r:
                         if client in self._clients:
-                            bytes = client.recv(1024)
-                            if len(bytes) == 0:
+                            try:
+                                bytes = client.recv(1024)
+                                if len(bytes) == 0:
+                                    self._remove_client(client)
+                            except socket.error, e:
                                 self._remove_client(client)
                                 
                 finally:
@@ -138,7 +136,7 @@ class MP3Chunker(threading.Thread):
         finally:
             for tr in self._clients:
                 tr.close()
-            self._clients = []
+            self._clients = set()
             self._numusers = 0
             os.kill(proc.pid, signal.SIGKILL) # because 2.5 doesn't have terminate()
 

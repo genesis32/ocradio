@@ -5,6 +5,7 @@ import socket
 import select
 import time
 from   mp3chunker import MP3Chunker
+from   dataloggers import InstantaneousDataLog
 
 g_mp3chunker = None
 
@@ -12,6 +13,8 @@ class ServerListener:
 
     def __init__(self):
         self.port = 8989
+        self._maxusers = 5
+        self._curruserfile = '/tmp/curruser.stats'
 
     def _write_header(self, client, str):
         client.send(str + '\r\n')
@@ -34,6 +37,7 @@ class ServerListener:
     def load(self, config):
         self.port = config.getint('network', 'port')
         self._maxusers = config.getint('network', 'maxusers')
+        self._curruserfile = config.get('data', 'curruserstats')
 
     def close(self):
         pass
@@ -66,6 +70,9 @@ class ServerListener:
                     else:
                         self._send_icy_header(conn)
                         g_mp3chunker.add_client(conn)
+
+                ustr = str(g_mp3chunker.numusers) + "/" + str(self._maxusers)
+                InstantaneousDataLog.dumpvalue(self._curruserfile, ustr)
 
             except KeyboardInterrupt:
                 running = False
