@@ -26,11 +26,12 @@ class ServerListener:
         global g_mp3chunker
 
         self._write_header(client, 'ICY 200 OK')
-        self._write_header(client, 'icy-name:OCRadio. Video Game ReMiX.')
-        self._write_header(client, 'icy-genre:Video game music.')
-        self._write_header(client, 'icy-url:http://www.msynet.com/ocradio/')
+        self._write_header(client, 'icy-name:OCXRadio. OverClocked ReMix Radio.')
+        self._write_header(client, 'icy-genre:Video Game.')
+        self._write_header(client, 'icy-url:http://www.msynet.com/ocxradio/')
         self._write_header(client, 'content-type:audio/mpeg')
         self._write_header(client, 'icy-pub:0')
+        self._write_header(client, 'icy-metaint:%d' % (MP3Chunker.ChunkSize))
         self._write_header(client, 'icy-br:%d' % (g_mp3chunker.bitrate))
         self._write_endheaders(client);
 

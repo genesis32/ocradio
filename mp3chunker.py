@@ -11,6 +11,7 @@ import threading
 
 import dataloggers
 from   dataloggers import InstantaneousDataLog
+from   metadata    import MP3Metadata
 
 class MP3Chunker(threading.Thread):
     ChunkSize = 2048
@@ -24,8 +25,9 @@ class MP3Chunker(threading.Thread):
         self._lame_exe   = '/usr/local/bin/lame'
         self._trackidx   = 0
         self._songidxfile = '/tmp/song.idx'
-        self.bitrate     = 128
-        self.numusers    = 0
+        self._metadata    = None
+        self.bitrate      = 128
+        self.numusers     = 0
         self.recent_tracks = dataloggers.RecentlyPlayedTracks()
 
     def load(self, config):
@@ -69,15 +71,19 @@ class MP3Chunker(threading.Thread):
         if self._trackidx >= len(self._fnames): 
             self._trackidx = 0
 
-        ret = self._fnames[self._trackidx]
+        nextfilename = self._fnames[self._trackidx]
 
         InstantaneousDataLog.dumpvalue(self._songidxfile, str(self._trackidx)) 
 
-        self.recent_tracks.update(ret)
+        self.recent_tracks.update(nextfilename)
+
+        mp3data = MP3Metadata()
+        mp3data.load(nextfilename)
+        self._metadata = mp3data.get_shoutcast_metadata()
 
         self._trackidx += 1
 
-        return ret
+        return nextfilename
 
     def _lame_enc_stream(self, fname):
         lfile = '%s -b %d --noreplaygain --quiet "%s" -' % (self._lame_exe, self.bitrate, fname)
@@ -90,6 +96,12 @@ class MP3Chunker(threading.Thread):
         self._clients.remove(client)
         self.numusers -= 1
         print "Removed client"
+
+    def _send_bytes(self, client, bytes):
+        bytes_to_send = len(bytes)
+        bytes_sent = 0
+        while bytes_sent < bytes_to_send:
+            bytes_sent += client.send(bytes[bytes_sent:])
 
     def run(self):
         self._running = True
@@ -112,10 +124,12 @@ class MP3Chunker(threading.Thread):
                     r, w, e = select.select(self._clients, self._clients, [], 0)
                     for client in w:
                         try:
-                            bytes_to_send = len(data)
-                            bytes_sent = 0
-                            while bytes_sent < bytes_to_send:
-                                bytes_sent += client.send(data[bytes_sent:])
+
+                            self._send_bytes(client, data)
+
+                            if self._metadata != None:
+                                self._send_bytes(client, self._metadata)
+
                         except socket.error, e:
                             self._remove_client(client)
                             
