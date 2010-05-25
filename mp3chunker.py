@@ -13,14 +13,22 @@ import dataloggers
 from   dataloggers import InstantaneousDataLog
 from   metadata    import MP3Metadata
 
+
+class MP3Client:
+
+    def __init__(self):
+        self.sock = None
+        self.supportsmetadata = False
+        self.bytestometadata = MP3Chunker.ChunkSize
+
 class MP3Chunker(threading.Thread):
-    ChunkSize = 2048
+    ChunkSize = 4096
 
     def __init__(self):
         threading.Thread.__init__ (self)
         self._filelist = None
         self._fnames   = None
-        self._clients  = set()
+        self._clients  = {}
         self._clientlock = threading.Lock()
         self._lame_exe   = '/usr/local/bin/lame'
         self._trackidx   = 0
@@ -59,7 +67,7 @@ class MP3Chunker(threading.Thread):
     def add_client(self, client):
         try:
             self._clientlock.acquire()
-            self._clients.add(client)
+            self._clients[client.sock] = client
             self.numusers += 1
         finally:
             self._clientlock.release()
@@ -92,16 +100,30 @@ class MP3Chunker(threading.Thread):
         return proc
 
     def _remove_client(self, client):
-        client.close()
-        self._clients.remove(client)
+        client.sock.close()
+        del self._clients[client.sock]
         self.numusers -= 1
         print "Removed client"
 
-    def _send_bytes(self, client, bytes):
+    def _send_bytes(self, sock, bytes):
         bytes_to_send = len(bytes)
         bytes_sent = 0
         while bytes_sent < bytes_to_send:
-            bytes_sent += client.send(bytes[bytes_sent:])
+            bytes_sent += sock.send(bytes[bytes_sent:])
+
+    def _send_data(self, client, bytes):
+        """ This function assumes that bytes is never more than 2x ChunkSize """
+        if not client.supportsmetadata:
+            self._send_bytes(client.sock, bytes)
+        else:
+            if client.bytestometadata < len(bytes):
+                self._send_bytes(client.sock, bytes[:client.bytestometadata])
+                self._send_bytes(client.sock, self._metadata)
+                self._send_bytes(client.sock, bytes[client.bytestometadata:])
+                client.bytestometadata = MP3Chunker.ChunkSize - len(bytes[client.bytestometadata:])
+            else:
+                client.bytestometadata -= len(bytes)
+                self._send_bytes(client.sock, bytes)
 
     def run(self):
         self._running = True
@@ -111,46 +133,50 @@ class MP3Chunker(threading.Thread):
             # time to sleep inbetweeen chunk sends..
             timetosleep = float(MP3Chunker.ChunkSize) / ((self.bitrate / 8) * 1024.0)
             while(self._running):
+                start = time.time()
+
                 data = proc.stdout.read(MP3Chunker.ChunkSize)
                 if not data:
                     os.kill(proc.pid, signal.SIGKILL) # because 2.5 doesn't have terminate()
                     proc = self._lame_enc_stream(self._next_trackname())
                     continue
-                
-                start = time.time()
+
                 try:
                     self._clientlock.acquire()
+
+                    csocks = self._clients.keys()
                     
-                    r, w, e = select.select(self._clients, self._clients, [], 0)
-                    for client in w:
+                    r, w, e = select.select(csocks, csocks, [], 0)
+                    for sock in w:
                         try:
-
-                            self._send_bytes(client, data)
-
-                            if self._metadata != None:
-                                self._send_bytes(client, self._metadata)
+                            self._send_data(self._clients[sock], data)
 
                         except socket.error, e:
-                            self._remove_client(client)
+                            self._remove_client(self._clients[sock])
                             
-                    for client in r:
-                        if client in self._clients:
+                    for sock in r:
+                        if sock in self._clients:
                             try:
-                                bytes = client.recv(1024)
+                                bytes = sock.recv(1024)
                                 if len(bytes) == 0:
-                                    self._remove_client(client)
+                                    self._remove_client(self._clients[sock])
                             except socket.error, e:
-                                self._remove_client(client)
+                                self._remove_client(self._clients[sock])
                                 
                 finally:
                     self._clientlock.release()
 
                 elapsed = time.time() - start
-                time.sleep(timetosleep - elapsed)
+
+                sleepytime = timetosleep - elapsed
+                if sleepytime > 0:
+                    time.sleep(sleepytime)
+
         finally:
-            for tr in self._clients:
-                tr.close()
-            self._clients = set()
+            for client in self._clients.values():
+                client.sock.close()
+
+            self._clients = {}
             self._numusers = 0
             os.kill(proc.pid, signal.SIGKILL) # because 2.5 doesn't have terminate()
 

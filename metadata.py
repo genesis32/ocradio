@@ -13,6 +13,7 @@ class MP3Metadata:
         try:
             self.taginfo = EasyID3(fname)
         except:
+            print "No Id3 tag for", fname
             self.taginfo = None
 
     def get_shoutcast_metadata(self):
@@ -34,6 +35,8 @@ class MP3Metadata:
 
         bufflen = len(shouttitle)
         numbytes = (bufflen - (bufflen % 16)) + 16
+
+        shouttitle = shouttitle.encode('utf-8')
 
         metalen  = struct.pack('1B', numbytes/16)
         metadata = struct.pack('%ds' % (numbytes), str(shouttitle))
