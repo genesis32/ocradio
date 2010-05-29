@@ -56,6 +56,24 @@ class ServerListener:
             pass
         return False
 
+    def _get_header(self, sock, max_bytes):
+        hdr = ''
+        while True:
+            rls, wls, xls = select.select([sock], [], [], 0.50)
+            if sock not in rls:
+                break
+
+            buff = sock.recv(1024)
+            if len(buff) == 0 or len(buff) >= max_bytes:
+                break;
+
+            hdr += buff
+            if len(hdr) >= 4 and hdr[-4:] == '\r\n\r\n':
+                break;
+
+        return hdr
+
+
     def serve(self):
         global g_mp3chunker
 
@@ -75,16 +93,14 @@ class ServerListener:
                     conn, addr = s.accept()
 
                     print "Accepted a connection from ", addr
-                    clienthdr = ''
-                    buff = conn.recv(1024)
-                    if buff[-4:] == '\r\n\r\n':
-                        clienthdr = buff
 
                     if g_mp3chunker.numusers >= self._maxusers:
                         self._write_header(conn, 'ICY 400 SERVER FULL')
                         self._write_endheaders(conn)
                         conn.close()
                     else:
+                        clienthdr = self._get_header(conn, 8192)
+
                         client = MP3Client()
                         client.sock = conn
                         client.supportsmetadata = self._supports_metadata(clienthdr)

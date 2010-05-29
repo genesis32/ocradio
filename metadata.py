@@ -30,6 +30,8 @@ class MP3Metadata:
                     title = self.taginfo['title']
 
                 shouttitle = "StreamTitle='" + artist[0] + " - " + title[0] + "';";
+            else:
+                shouttitle = "StreamTitle='';"
         except:
             shouttitle = "StreamTitle='';"
 
