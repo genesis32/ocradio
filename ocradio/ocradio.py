@@ -1,10 +1,17 @@
 #!/usr/bin/env python
 
-import ConfigParser
+# Copyright (C) 1994-2010 by David Massey (davidm@msynet.com)
+# See LICENSE for licensing information
+
+import sys
+import os
 import socket
 import select
 import time
+import getopt
 import re
+
+import ConfigParser
 
 from   mp3chunker import MP3Chunker, MP3Client
 from   dataloggers import InstantaneousDataLog
@@ -65,11 +72,11 @@ class ServerListener:
 
             buff = sock.recv(1024)
             if len(buff) == 0 or len(buff) >= max_bytes:
-                break;
+                break
 
             hdr += buff
             if len(hdr) >= 4 and hdr[-4:] == '\r\n\r\n':
-                break;
+                break
 
         return hdr
 
@@ -77,7 +84,7 @@ class ServerListener:
     def serve(self):
         global g_mp3chunker
 
-        print 'starting OCRadio Server...'
+        print 'Starting OCRadio Server on port %d' % (self.port)
 
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -116,12 +123,47 @@ class ServerListener:
 
         s.close()
 
+def usage():
+    print >> sys.stderr, "%s - Streaming MP3 Server (http://www.msynet.com/ocxradio)" % (sys.argv[0])
+    print >> sys.stderr
+    print >> sys.stderr, "usage: %s [options]" % (sys.argv[0])
+    print >> sys.stderr
+    print >> sys.stderr, "OPTIONS" 
+    print >> sys.stderr
+    print >> sys.stderr, "-h --help                print this help message"
+    print >> sys.stderr, "-c --config <cfg file>   config file to read (default: default.cfg)"
+
 def main():
     global g_mp3chunker
     server = None
 
+    configfile = 'default.cfg'
+    try:
+        opts, args = getopt.getopt(sys.argv[1:], 'hc:', ['help', 'config'])
+
+        for opt, arg in opts:
+            if opt in ('-h', '--help'):
+                usage()
+                sys.exit(0)
+            if opt in ('-c', '--config'):
+                configfile = arg 
+
+    except getopt.GetoptError:
+        usage()
+        sys.exit(2)
+
+    if not os.path.isfile(configfile):
+        print >> sys.stderr, "Config file %s does not exist!" % (configfile)
+        usage()
+        sys.exit(1)
+
     config = ConfigParser.ConfigParser()
-    config.readfp(file('default.cfg'))
+
+    try:
+        fh = file(configfile)
+        config.readfp(fh)
+    finally:
+        fh.close()
     
     g_mp3chunker = MP3Chunker()
     g_mp3chunker.load(config)
@@ -129,8 +171,6 @@ def main():
 
     server = ServerListener()
     server.load(config)
-
-    # loop
 
     server.serve()
 
