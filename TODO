@@ -1,5 +1,4 @@
 * Real logging of connections, errors, etc..
 * Include mutagen in src directory
 * Make an easy_install package
-* Command line parameters for loading different config files
 * start/stop/restart from init.d scripts

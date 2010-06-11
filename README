@@ -9,7 +9,9 @@ If you have any new features, bug fixes, feature suggestions, or just want to ch
 
 DESCRIPTION
 
-I wrote this because I wanted an mp3 server where I could easily play a directory of mp3's. I've listen to the stream on QuickTime (iPhone), iTunes, VLC, and WinAmp.  I'm pretty lazy so I just run it through screen now and it writes important data to stdout.
+I wrote this because I wanted an mp3 server where I could easily play a directory of mp3's. 
+I've listen to the stream on QuickTime (iPhone), iTunes, VLC, and WinAmp.  I'm pretty lazy 
+so I just run it through screen now and it writes important data to stdout.
 
 INSTALLING
 See the INSTALL file

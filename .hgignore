@@ -1,5 +1,4 @@
 syntax: glob
-file.list
 media/*
 *.pyc
 *~
