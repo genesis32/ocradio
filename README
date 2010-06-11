@@ -5,12 +5,13 @@ Broadcasting at http://www.msynet.com/ocxradio
 
 AUTHOR
 
-If you have any new features, bug fixes, feature suggestions, or just want to chat email me at davidm@msynet.com
+If you have any new features, bug fixes, feature suggestions, or just want to chat email me 
+at davidm@msynet.com
 
 DESCRIPTION
 
-I wrote this because I wanted an mp3 server where I could easily play a directory of mp3's. 
-I've listen to the stream on QuickTime (iPhone), iTunes, VLC, and WinAmp.  I'm pretty lazy 
+I wrote this because I wanted an mp3 server where I could easily play a directory of mp3s. 
+I have listened to the stream on QuickTime (iPhone), iTunes, VLC, and WinAmp.  I'm pretty lazy 
 so I just run it through screen now and it writes important data to stdout.
 
 INSTALLING

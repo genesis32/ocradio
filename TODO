@@ -1,4 +1,5 @@
 * Real logging of connections, errors, etc..
 * Include mutagen in src directory
 * Make an easy_install package
+* The killing of the lame process is kind of lame (no pun intended)
 * start/stop/restart from init.d scripts
