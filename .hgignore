@@ -1,5 +1,8 @@
 syntax: glob
 media/*
+build/*
+dist/*
+OCRadio.egg*/
 *.pyc
 *~
 *.mp3

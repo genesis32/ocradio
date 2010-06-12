@@ -124,16 +124,17 @@ class ServerListener:
         s.close()
 
 def usage():
-    print >> sys.stderr, "%s - Streaming MP3 Server (http://www.msynet.com/ocxradio)" % (sys.argv[0])
+    exename = os.path.basename(sys.argv[0])
+    print >> sys.stderr, "%s - Streaming MP3 Server (http://www.msynet.com/ocxradio)" % (exename)
     print >> sys.stderr
-    print >> sys.stderr, "usage: %s [options]" % (sys.argv[0])
+    print >> sys.stderr, "usage: %s [options]" % (exename)
     print >> sys.stderr
     print >> sys.stderr, "OPTIONS" 
     print >> sys.stderr
     print >> sys.stderr, "-h --help                print this help message"
     print >> sys.stderr, "-c --config <cfg file>   config file to read (default: default.cfg)"
 
-def main():
+def run():
     global g_mp3chunker
     server = None
 
@@ -178,4 +179,4 @@ def main():
     g_mp3chunker.stop()
             
 if __name__ == '__main__':
-    main()
+    run()

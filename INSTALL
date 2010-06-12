@@ -1,13 +1,13 @@
 INSTALL THE REQUIRED SOFTWARE
-1.) Python Mutagen (for mp3 header parsing) (http://code.google.com/p/mutagen/)
-2.) Lame MP3 Encoder (http://lame.sourceforge.net/)
-3.) Python 2.5 or 2.6 (http://www.python.org)
+1.) Python 2.5 or 2.6 (http://www.python.org)
+2.) Python Mutagen (for mp3 header parsing) (http://code.google.com/p/mutagen/)
+3.) Lame MP3 Encoder (http://lame.sourceforge.net/)
 
 RUN THE SOFTWARE
 
 1.) Change the examples/default.cfg file to your liking.
-2.) Create a new examples/file.list file with the MP3 files you want to play 
-    (I like to just do 'find /abs/path/to/dir -name *.mp3 > examples/file.list')
-3.) chmod 755 ocradio/ocradio.py
-4.) Run ocradio (like 'ocradio/ocradio.py -c examples/default.cfg').
-5.) To exist just Ctrl-C (I know it's lame!)
+2.) Create a new examples/file.list file with the MP3 files you want to play
+    (I like to just do 'find /abs/path/to/dir -name *.mp3 > examples/file.list').
+3.) Install 'sudo python setup.py install'.
+4.) Ensure that the bin/ocradio script is in your path.
+4.) Run ocradio with the config file 'ocradio -c examples/default.cfg'
