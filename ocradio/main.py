@@ -134,7 +134,7 @@ def usage():
     print >> sys.stderr, "-h --help                print this help message"
     print >> sys.stderr, "-c --config <cfg file>   config file to read (default: default.cfg)"
     print >> sys.stderr, "-d --daemon              daemonize the current process"
-    print >> sys.stderr, "-k <pidfile>             kill the process (nicely)"
+    print >> sys.stderr, "-k --kill   <pidfile>    kill the process (nicely)"
 
 def start(configfile):
     global g_mp3chunker
@@ -176,7 +176,7 @@ def run():
     daemon = False
     kill   = False
     try:
-        opts, args = getopt.getopt(sys.argv[1:], 'dhc:k:', ['daemon', 'help', 'config'])
+        opts, args = getopt.getopt(sys.argv[1:], 'dhc:k:', ['daemon', 'help', 'config', 'kill'])
 
         for opt, arg in opts:
             if opt in ('-h', '--help'):
