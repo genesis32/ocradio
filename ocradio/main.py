@@ -176,7 +176,7 @@ def run():
     daemon = False
     kill   = False
     try:
-        opts, args = getopt.getopt(sys.argv[1:], 'dhc:k:', ['daemon', 'help', 'config', 'kill'])
+        opts, args = getopt.getopt(sys.argv[1:], 'dhc:k:', ['daemon', 'help', 'config=', 'kill='])
 
         for opt, arg in opts:
             if opt in ('-h', '--help'):
