@@ -10,7 +10,7 @@ setup(name='OCRadio',
       author_email='davidm@msynet.com',
       url='http://www.msynet.com/ocxradio/',
       license='GPL',
-      install_requires=['mutagen'],
+      install_requires=['mutagen', 'python-daemon'],
       scripts=['bin/ocradio'],
       packages=['ocradio']
       )

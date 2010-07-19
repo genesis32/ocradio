@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 # Copyright (C) 1994-2010 by David Massey (davidm@msynet.com)
 # See LICENSE for licensing information
 

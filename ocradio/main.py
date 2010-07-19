@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 # Copyright (C) 1994-2010 by David Massey (davidm@msynet.com)
 # See LICENSE for licensing information
 
@@ -10,10 +8,12 @@ import select
 import time
 import getopt
 import re
-
+import signal
 import ConfigParser
 
-from   mp3chunker import MP3Chunker, MP3Client
+import util
+
+from   mp3chunker  import MP3Chunker, MP3Client
 from   dataloggers import InstantaneousDataLog
 
 g_mp3chunker = None
@@ -133,39 +133,20 @@ def usage():
     print >> sys.stderr
     print >> sys.stderr, "-h --help                print this help message"
     print >> sys.stderr, "-c --config <cfg file>   config file to read (default: default.cfg)"
+    print >> sys.stderr, "-d --daemon              daemonize the current process"
+    print >> sys.stderr, "-k <pidfile>             kill the process (nicely)"
 
-def run():
+def start(configfile):
     global g_mp3chunker
     server = None
 
-    configfile = 'default.cfg'
-    try:
-        opts, args = getopt.getopt(sys.argv[1:], 'hc:', ['help', 'config'])
-
-        for opt, arg in opts:
-            if opt in ('-h', '--help'):
-                usage()
-                sys.exit(0)
-            if opt in ('-c', '--config'):
-                configfile = arg 
-
-    except getopt.GetoptError:
-        usage()
-        sys.exit(2)
-
-    if not os.path.isfile(configfile):
-        print >> sys.stderr, "Config file %s does not exist!" % (configfile)
-        usage()
-        sys.exit(1)
-
     config = ConfigParser.ConfigParser()
-
     try:
         fh = file(configfile)
         config.readfp(fh)
     finally:
         fh.close()
-    
+
     g_mp3chunker = MP3Chunker()
     g_mp3chunker.load(config)
     g_mp3chunker.start()
@@ -177,6 +158,55 @@ def run():
 
     server.close()
     g_mp3chunker.stop()
+
+def killpid(pidfile):
+    if os.path.exists(pidfile):
+        pid = open(pidfile).readline()
+        print "Sending SIGTERM to pid %d" % (int(pid))
+        os.kill(int(pid), signal.SIGTERM)
+        os.unlink(pidfile)
+        return 0
+    return 1
+
+def run():
+    global g_mp3chunker
+    server = None
+
+    configfile = 'default.cfg'
+    daemon = False
+    kill   = False
+    try:
+        opts, args = getopt.getopt(sys.argv[1:], 'dhc:k:', ['daemon', 'help', 'config'])
+
+        for opt, arg in opts:
+            if opt in ('-h', '--help'):
+                usage()
+                sys.exit(0)
+            if opt in ('-c', '--config'):
+                configfile = arg 
+            if opt in ('-d', '--daemon'):
+                daemon = True
+            if opt in ('-k', '--kill'):
+                kill = True
+                pidfile = arg
+
+    except getopt.GetoptError:
+        usage()
+        sys.exit(2)
+
+    if kill:
+        retcode = killpid(pidfile)
+        sys.exit(retcode)
+    
+    if not os.path.isfile(configfile):
+        print >> sys.stderr, "Config file %s does not exist!" % (configfile)
+        usage()
+        sys.exit(1)
+
+    if daemon:
+        util.daemonize('.')
+
+    start(configfile)
             
 if __name__ == '__main__':
     run()
