@@ -1,5 +1,4 @@
 * Real logging of connections, errors, etc..
 * Include mutagen in src directory
 * The killing of the lame process is kind of lame (no pun intended)
-* python-daemon?
 * start/stop/restart from init.d scripts
